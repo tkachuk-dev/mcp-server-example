@@ -10,6 +10,7 @@ use App\Models\Refund;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\UserProjection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Seeder;
 
 class BillingDemoSeeder extends Seeder
@@ -18,12 +19,33 @@ class BillingDemoSeeder extends Seeder
 
     private const int HISTORY_DAYS = 365;
 
+    /** @var list<class-string<Model>> children first, so foreign keys never block the cleanup */
+    private const array DEMO_MODELS = [
+        Refund::class,
+        Payment::class,
+        Order::class,
+        Subscription::class,
+        UserProjection::class,
+        Tenant::class,
+    ];
+
     public function run(): void
     {
         fake()->seed(20261013);
 
+        $this->purgeDemoData();
+
         $this->seedTenant(Tenant::factory()->create(['name' => 'Demo UAH', 'currency' => 'UAH']), 1_000);
         $this->seedTenant(Tenant::factory()->create(['name' => 'Demo USD', 'currency' => 'USD']), 2_000);
+    }
+
+    // Demo user_ids are fixed (1000+, 2000+), so re-seeding on top of old data would hit the primary key.
+    // Truncating also restarts the ids, which keeps the demo tenants at 1 and 2 like the users-service fixtures.
+    private function purgeDemoData(): void
+    {
+        foreach (self::DEMO_MODELS as $model) {
+            $model::query()->truncate();
+        }
     }
 
     private function seedTenant(Tenant $tenant, int $firstUserId): void
