@@ -1,0 +1,252 @@
+# Shared components (schemas, security schemes, parameters, error responses).
+components:
+  securitySchemes:
+    serviceToken:
+      type: http
+      scheme: bearer
+      description: |
+        Service-to-service token for /internal/* (only its sha256 hash is stored, env MCP_SERVICE_TOKEN_HASHES).
+        Every request must also carry the X-Acting-User header with the email of the human on whose behalf the call is made.
+
+  headers:
+    XRequestId:
+      description: Request id, echoed from the request or generated.
+      schema:
+        type: string
+
+  parameters:
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    XActingUser:
+      name: X-Acting-User
+      in: header
+      required: true
+      description: Email of the user on whose behalf the MCP server calls the API.
+      schema:
+        type: string
+        format: email
+        maxLength: 254
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    Days:
+      name: days
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 365
+        default: 30
+
+  schemas:
+    Currency:
+      type: string
+      description: ISO 4217 currency code.
+      pattern: '^[A-Z]{3}$'
+    RfmSegment:
+      type: string
+      enum: [champions, loyal, potential, at_risk, hibernating, lost]
+    RfmSegmentSummary:
+      type: object
+      additionalProperties: false
+      required: [segment, customers_count, avg_recency_days, avg_frequency, avg_monetary_minor]
+      properties:
+        segment:
+          $ref: '#/components/schemas/RfmSegment'
+        customers_count:
+          type: integer
+          minimum: 0
+        avg_recency_days:
+          type: number
+          minimum: 0
+        avg_frequency:
+          type: number
+          minimum: 0
+        avg_monetary_minor:
+          type: integer
+          minimum: 0
+          description: Average paid amount per customer, minor units.
+    RfmSummary:
+      type: object
+      additionalProperties: false
+      required: [tenant_id, currency, generated_at, segments]
+      properties:
+        tenant_id:
+          type: integer
+        currency:
+          $ref: '#/components/schemas/Currency'
+        generated_at:
+          type: string
+          format: date-time
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/RfmSegmentSummary'
+    ChurnCustomer:
+      type: object
+      additionalProperties: false
+      required: [user_id, churn_score, segment, last_order_at]
+      properties:
+        user_id:
+          type: integer
+          description: User id issued by the Users service.
+        churn_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        segment:
+          $ref: '#/components/schemas/RfmSegment'
+        last_order_at:
+          type: [string, 'null']
+          format: date-time
+    ChurnRisk:
+      type: object
+      additionalProperties: false
+      required: [tenant_id, limit, generated_at, customers]
+      properties:
+        tenant_id:
+          type: integer
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+        generated_at:
+          type: string
+          format: date-time
+        customers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChurnCustomer'
+    RevenueDay:
+      type: object
+      additionalProperties: false
+      required: [date, revenue_minor, orders_count, avg_order_value_minor, refunds_minor, refunds_count, new_subscriptions, cancelled_subscriptions]
+      properties:
+        date:
+          type: string
+          format: date
+        revenue_minor:
+          type: integer
+          minimum: 0
+        orders_count:
+          type: integer
+          minimum: 0
+        avg_order_value_minor:
+          type: integer
+          minimum: 0
+        refunds_minor:
+          type: integer
+          minimum: 0
+        refunds_count:
+          type: integer
+          minimum: 0
+        new_subscriptions:
+          type: integer
+          minimum: 0
+        cancelled_subscriptions:
+          type: integer
+          minimum: 0
+    RevenueSummary:
+      type: object
+      additionalProperties: false
+      required: [tenant_id, days, currency, period_start, period_end, generated_at, daily]
+      properties:
+        tenant_id:
+          type: integer
+        days:
+          type: integer
+          minimum: 1
+          maximum: 365
+        currency:
+          $ref: '#/components/schemas/Currency'
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        generated_at:
+          type: string
+          format: date-time
+        daily:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevenueDay'
+    Health:
+      type: object
+      additionalProperties: false
+      required: [service, checked_at]
+      properties:
+        service:
+          type: string
+        checked_at:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+    ValidationError:
+      type: object
+      required: [message, errors]
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+  responses:
+    Unauthorized:
+      description: Missing/invalid service token or X-Acting-User header.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Tenant not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    MethodNotAllowed:
+      description: Only GET is allowed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationFailed:
+      description: Invalid query parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    TooManyRequests:
+      description: Rate limit exceeded (120 requests per minute per actor).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServiceUnavailable:
+      description: A dependency (database, cache or queue) is unavailable. No details are exposed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

@@ -1,0 +1,30 @@
+# Path items for /health/* (tag health), referenced from openapi.yaml.
+getLiveness:
+  get:
+    operationId: getLiveness
+    tags: [health]
+    summary: Liveness probe (process is alive)
+    security: []
+    responses:
+      '200':
+        description: Alive
+        content:
+          application/json:
+            schema:
+              $ref: './components.yaml#/components/schemas/Health'
+
+getReadiness:
+  get:
+    operationId: getReadiness
+    tags: [health]
+    summary: Readiness probe (database, cache and queue reachable)
+    security: []
+    responses:
+      '200':
+        description: Ready
+        content:
+          application/json:
+            schema:
+              $ref: './components.yaml#/components/schemas/Health'
+      '503':
+        $ref: './components.yaml#/components/responses/ServiceUnavailable'

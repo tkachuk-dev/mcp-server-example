@@ -1,0 +1,78 @@
+# Local development. Requires the shared network: docker network create internal-ai
+services:
+  billing-service:
+    build:
+      context: .
+      args:
+        INSTALL_DEV: "1"
+    ports:
+      - "8082:80"
+    environment:
+      APP_NAME: billing-service
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_URL: http://billing-service
+      LOG_CHANNEL: stderr
+      LOG_STDERR_FORMATTER: Monolog\Formatter\JsonFormatter
+      LOG_LEVEL: info
+      DB_CONNECTION: pgsql
+      DB_HOST: billing-db
+      DB_PORT: 5432
+      DB_DATABASE: billing
+      DB_USERNAME: billing
+      DB_PASSWORD: billing
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: billing-redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: array
+      # sha256("dev-mcp-token") — local development only.
+      MCP_SERVICE_TOKEN_HASHES: '["d967787d3023c82861961e4fb7acaacf48d1175fa1873b4b679bec86c69afd7c"]'
+      RUN_MIGRATIONS: "true"
+    depends_on:
+      billing-db:
+        condition: service_healthy
+      billing-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://localhost/health/live') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    networks:
+      - default
+      - internal-ai
+
+  billing-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: billing
+      POSTGRES_USER: billing
+      POSTGRES_PASSWORD: billing
+    volumes:
+      - billing-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U billing -d billing"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - default
+
+  billing-redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - default
+
+volumes:
+  billing-db-data:
+
+networks:
+  internal-ai:
+    external: true

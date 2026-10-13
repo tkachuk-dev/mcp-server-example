@@ -1,0 +1,26 @@
+{
+	frankenphp
+	auto_https off
+	admin off
+}
+
+# Internal listener: reachable only inside the cluster network (DNS name billing-service).
+:80 {
+	root * /app/public
+	encode zstd gzip
+	php_server
+}
+
+# Public listener for the API gateway / ingress: /internal/* must never be exposed.
+:8000 {
+	root * /app/public
+	encode zstd gzip
+
+	handle /internal/* {
+		respond 404
+	}
+
+	handle {
+		php_server
+	}
+}
