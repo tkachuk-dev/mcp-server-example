@@ -18,7 +18,8 @@ Thumbs.db
 # Temporary skeleton directories used while scaffolding services
 /.tmp-*/
 
-# Local env overrides and personal Postman environments — may contain real secrets
+# Local env overrides, Google OAuth client files and personal Postman environments — may contain real secrets
+client_secret_*.json
 .env.local
 .env.*.local
 *.local.postman_environment.json

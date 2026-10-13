@@ -150,13 +150,27 @@ A successful result is cached for ≤ 5 minutes under the sha256 of the token.
 
 **Claude Code**:
 
+Google has no DCR, so pass the Client ID, the secret and a fixed callback port. The callback port makes the
+redirect URI predictable, so it can be registered in the Google OAuth client
+(`http://localhost:8765/callback` for the example below):
+
 ```bash
-claude mcp add --transport http internal-ai https://mcp.example.com/mcp
+MCP_CLIENT_SECRET='<google client secret>' claude mcp add --transport http \
+  --client-id '<google client id>' --client-secret --callback-port 8765 \
+  --scope user internal-ai http://localhost:8080/mcp     # or https://mcp.example.com/mcp
 ```
 
-Then `/mcp` inside Claude Code → authenticate. The client finds the authorization server via
-`WWW-Authenticate: Bearer resource_metadata="…"` → `/.well-known/oauth-protected-resource` → `accounts.google.com`.
-Because there's no DCR, you need to pass the Client ID/Secret; check the exact flags in the documentation for your Claude Code version.
+Then `/mcp` inside Claude Code → `internal-ai` → *Authenticate*: a browser window opens with the Google login.
+The client finds the authorization server via `WWW-Authenticate: Bearer resource_metadata="…"` →
+`/.well-known/oauth-protected-resource` → `accounts.google.com`. If Google shows `redirect_uri_mismatch`, the error
+page shows the exact URI the client sent: add that URI to the OAuth client.
+
+Quick check without the OAuth flow: get a Google access token issued for the same Client ID (for example
+in Postman, see below) and pass it as a header. Google access tokens expire after about an hour.
+
+```bash
+claude mcp add --transport http internal-ai http://localhost:8080/mcp --header "Authorization: Bearer <access token>"
+```
 
 **claude.ai**: Settings → Connectors → *Add custom connector* → URL `https://mcp.example.com/mcp`, and under
 *Advanced settings* the OAuth Client ID / Client Secret from Google Cloud. Add the connector's redirect URI to the OAuth client (step 3).
