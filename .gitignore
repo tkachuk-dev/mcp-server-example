@@ -1,0 +1,32 @@
+# Monorepo-wide rules. Framework-specific ignores (vendor/, var/, caches) live in each service's own .gitignore.
+
+# IDE / editors
+.idea/
+.vscode/
+.fleet/
+.zed/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code personal settings
+.claude/settings.local.json
+
+# Temporary skeleton directories used while scaffolding services
+/.tmp-*/
+
+# Local env overrides and personal Postman environments — may contain real secrets
+.env.local
+.env.*.local
+*.local.postman_environment.json
+postman/*.local.*
+
+# Dependencies and tool caches, in case a service .gitignore misses them
+vendor/
+node_modules/
+.phpunit.cache/
+.phpunit.result.cache
+.php-cs-fixer.cache
