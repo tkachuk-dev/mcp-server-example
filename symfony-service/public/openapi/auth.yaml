@@ -1,0 +1,37 @@
+openapi: 3.1.0
+info:
+  title: Users service — auth
+  version: 1.0.0
+paths:
+  /api/auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in with email and password (session cookie)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '204':
+          description: Logged in
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string

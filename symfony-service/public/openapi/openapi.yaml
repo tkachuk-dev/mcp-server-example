@@ -1,0 +1,32 @@
+openapi: 3.1.0
+info:
+  title: Users service API
+  version: 1.0.0
+  description: Users, authentication, roles, 2FA, login journal and security events. Source of truth for user ids.
+servers:
+  - url: http://users-service
+    description: In-cluster DNS name
+tags:
+  - name: auth
+  - name: health
+  - name: internal-ai
+    description: Read-only internal API for the MCP server (see internal-ai.yaml), not exposed via ingress.
+paths:
+  /api/auth/login:
+    $ref: './auth.yaml#/paths/~1api~1auth~1login'
+  /health/live:
+    $ref: './health.yaml#/paths/~1health~1live'
+  /health/ready:
+    $ref: './health.yaml#/paths/~1health~1ready'
+  /internal/ai/v1/tenants/{tenantId}/users-summary:
+    $ref: './internal-ai.yaml#/paths/~1internal~1ai~1v1~1tenants~1%7BtenantId%7D~1users-summary'
+  /internal/ai/v1/tenants/{tenantId}/login-activity:
+    $ref: './internal-ai.yaml#/paths/~1internal~1ai~1v1~1tenants~1%7BtenantId%7D~1login-activity'
+  /internal/ai/v1/tenants/{tenantId}/security-events:
+    $ref: './internal-ai.yaml#/paths/~1internal~1ai~1v1~1tenants~1%7BtenantId%7D~1security-events'
+components:
+  securitySchemes:
+    bearerAuth:
+      $ref: './components.yaml#/components/securitySchemes/bearerAuth'
+    serviceToken:
+      $ref: './components.yaml#/components/securitySchemes/serviceToken'

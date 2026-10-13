@@ -1,0 +1,54 @@
+# Local development. Join the shared network once: docker network create internal-ai
+services:
+  users-service:
+    build:
+      context: .
+      target: dev
+    environment:
+      APP_ENV: dev
+      APP_SECRET: dev-only-secret-change-me
+      DATABASE_URL: postgresql://app:app@database:5432/users?serverVersion=17&charset=utf8
+      REDIS_URL: redis://redis:6379
+      TRUSTED_PROXIES: 127.0.0.1,REMOTE_ADDR
+      # sha256("dev-mcp-token") — local placeholder only.
+      MCP_SERVICE_TOKEN_HASHES: '["d967787d3023c82861961e4fb7acaacf48d1175fa1873b4b679bec86c69afd7c"]'
+    ports:
+      - "8081:80"     # internal listener (what mcp-server uses via http://users-service)
+      - "8091:8080"   # public listener (/internal/* → 404), what an ingress would target
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - default
+      - internal-ai
+
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: users
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "users", "-U", "app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - users_db_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7.4-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+networks:
+  internal-ai:
+    external: true
+
+volumes:
+  users_db_data:

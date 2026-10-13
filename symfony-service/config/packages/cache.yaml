@@ -1,0 +1,17 @@
+framework:
+    cache:
+        prefix_seed: internal-ai/users-service
+
+        # Shared Redis keeps the service stateless (cache + rate limiter) across replicas.
+        app: cache.adapter.redis
+        default_redis_provider: '%env(REDIS_URL)%'
+
+when@test:
+    framework:
+        cache:
+            app: cache.adapter.array
+            pools:
+                # Filesystem instead of array: array pools are reset between test requests,
+                # so rate-limit counters would never accumulate.
+                cache.rate_limiter:
+                    adapter: cache.adapter.filesystem

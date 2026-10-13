@@ -1,0 +1,16 @@
+parameters:
+    # Level 7, not 8: CLAUDE.md requires DTO getters to return non-nullable types from nullable
+    # properties (the validator/factory guarantees the value), which level 8 reports on every getter.
+    level: 7
+    paths:
+        - bin/
+        - config/
+        - public/
+        - src/
+        - tests/
+    excludePaths:
+        - config/reference.php
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+    doctrine:
+        objectManagerLoader: tests/object-manager.php

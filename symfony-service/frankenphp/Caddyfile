@@ -1,0 +1,32 @@
+{
+	{$CADDY_GLOBAL_OPTIONS}
+	auto_https off
+
+	frankenphp {
+		{$FRANKENPHP_CONFIG}
+	}
+}
+
+# Internal listener: reachable only on the private cluster network (DNS name "users-service").
+# Serves the whole application, including /internal/ai/v1 for the MCP server.
+:80 {
+	root * /app/public
+	encode zstd gzip
+	php_server
+}
+
+# Public listener: the only port the ingress / API gateway may route to.
+# /internal/* is never exposed to the internet.
+:8080 {
+	root * /app/public
+	encode zstd gzip
+
+	handle /internal/* {
+		header Content-Type application/json
+		respond `{"message":"Not Found"}` 404
+	}
+
+	handle {
+		php_server
+	}
+}

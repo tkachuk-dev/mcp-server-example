@@ -1,0 +1,307 @@
+openapi: 3.1.0
+info:
+  title: Users service — shared components
+  version: 1.0.0
+paths: {}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: End-user access token (public API).
+    serviceToken:
+      type: http
+      scheme: bearer
+      description: >-
+        Service-to-service token for /internal/* (only its sha256 hash is stored in
+        MCP_SERVICE_TOKEN_HASHES). Must be sent together with the X-Acting-User header.
+
+  parameters:
+    XActingUser:
+      name: X-Acting-User
+      in: header
+      required: true
+      description: Email of the human on whose behalf the MCP server calls the API (audit and rate limiting).
+      schema:
+        type: string
+        format: email
+        maxLength: 254
+    XRequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      description: Correlation id; echoed back in the response, generated when missing or invalid.
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9._-]{1,128}$'
+    Traceparent:
+      name: traceparent
+      in: header
+      required: false
+      description: W3C Trace Context header; generated when missing or invalid.
+      schema:
+        type: string
+        pattern: '^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$'
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    Days:
+      name: days
+      in: query
+      required: false
+      description: Number of days, today (UTC) included.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 90
+        default: 30
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+
+  headers:
+    XRequestId:
+      description: Correlation id of the request.
+      schema:
+        type: string
+    RetryAfter:
+      description: Seconds until the rate limit window allows a new request.
+      schema:
+        type: integer
+
+  responses:
+    Unauthorized:
+      description: Missing/invalid service token or missing/invalid X-Acting-User.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Access denied.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Tenant not found.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    MethodNotAllowed:
+      description: Only GET is allowed.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationFailed:
+      description: Invalid query parameters.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    TooManyRequests:
+      description: Rate limit (120 requests/minute per actor) exceeded.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServiceUnavailable:
+      description: A dependency is not available (details are only logged).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+    ValidationError:
+      type: object
+      additionalProperties: false
+      required: [message, errors]
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          description: Query parameter name (snake_case) => list of violation messages.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    Health:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+    Role:
+      type: integer
+      description: '1 = ROLE_USER, 2 = ROLE_MANAGER, 3 = ROLE_ADMIN'
+      enum: [1, 2, 3]
+    SecurityEventType:
+      type: string
+      enum: [failed_login_burst, account_locked, 2fa_disabled, password_reset, role_changed]
+    RoleUsersCount:
+      type: object
+      additionalProperties: false
+      required: [role, role_name, users_count]
+      properties:
+        role:
+          $ref: '#/components/schemas/Role'
+        role_name:
+          type: string
+          enum: [ROLE_USER, ROLE_MANAGER, ROLE_ADMIN]
+        users_count:
+          type: integer
+          minimum: 0
+    UsersSummary:
+      type: object
+      additionalProperties: false
+      required: [tenant_id, generated_at, total_users, active_last_30_days, blocked_users, unverified_email_users, two_factor_enabled_ratio, roles]
+      properties:
+        tenant_id:
+          type: integer
+        generated_at:
+          type: string
+          format: date-time
+        total_users:
+          type: integer
+          minimum: 0
+          description: Users that are not deleted.
+        active_last_30_days:
+          type: integer
+          minimum: 0
+          description: Users with a successful login within the last 30 days.
+        blocked_users:
+          type: integer
+          minimum: 0
+        unverified_email_users:
+          type: integer
+          minimum: 0
+        two_factor_enabled_ratio:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Share of users with 2FA enabled, rounded to 2 decimals.
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleUsersCount'
+    DailyLoginActivity:
+      type: object
+      additionalProperties: false
+      required: [date, successful_logins, failed_logins, unique_active_users, password_resets]
+      properties:
+        date:
+          type: string
+          format: date
+        successful_logins:
+          type: integer
+          minimum: 0
+        failed_logins:
+          type: integer
+          minimum: 0
+        unique_active_users:
+          type: integer
+          minimum: 0
+        password_resets:
+          type: integer
+          minimum: 0
+    LoginActivity:
+      type: object
+      additionalProperties: false
+      required: [tenant_id, days, period_start, period_end, generated_at, daily]
+      properties:
+        tenant_id:
+          type: integer
+        days:
+          type: integer
+          minimum: 1
+          maximum: 90
+        period_start:
+          type: string
+          format: date
+        period_end:
+          type: string
+          format: date
+        generated_at:
+          type: string
+          format: date-time
+        daily:
+          type: array
+          description: One entry per day of the period, ascending; days without activity are zero-filled.
+          items:
+            $ref: '#/components/schemas/DailyLoginActivity'
+    SecurityEventItem:
+      type: object
+      additionalProperties: false
+      required: [id, type, user_id, occurred_at]
+      properties:
+        id:
+          type: integer
+        type:
+          $ref: '#/components/schemas/SecurityEventType'
+        user_id:
+          type: [integer, 'null']
+          description: Internal user id (same id in the Billing service); null for system-level events.
+        occurred_at:
+          type: string
+          format: date-time
+    SecurityEvents:
+      type: object
+      additionalProperties: false
+      required: [tenant_id, limit, generated_at, events]
+      properties:
+        tenant_id:
+          type: integer
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+        generated_at:
+          type: string
+          format: date-time
+        events:
+          type: array
+          description: Most recent first.
+          items:
+            $ref: '#/components/schemas/SecurityEventItem'

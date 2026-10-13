@@ -1,0 +1,30 @@
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+
+    # Sessions are used only by the user-facing "main" firewall; /internal/ai is stateless.
+    session: true
+
+    trusted_proxies: '%env(TRUSTED_PROXIES)%'
+    trusted_headers: ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-host']
+
+    serializer:
+        name_converter: 'serializer.name_converter.camel_case_to_snake_case'
+        default_context:
+            datetime_format: 'Y-m-d\TH:i:sP'
+            datetime_timezone: 'UTC'
+
+    rate_limiter:
+        internal_ai:
+            policy: sliding_window
+            limit: 120
+            interval: '1 minute'
+            cache_pool: cache.rate_limiter
+            # Counters live in the shared Redis pool; no distributed lock is needed for a sliding window.
+            lock_factory: null
+
+when@test:
+    framework:
+        test: true
+        session:
+            storage_factory_id: session.storage.factory.mock_file

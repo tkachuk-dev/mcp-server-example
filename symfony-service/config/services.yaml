@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+# Services are configured with PHP attributes (#[Autowire], #[AsEventListener], ...).
+# Do not add manual definitions here when an attribute exists for the same purpose.
+parameters:
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Dto/'
+            - '../src/Entity/'
+            - '../src/Enums/'
+            - '../src/Exception/'
+            - '../src/Kernel.php'
