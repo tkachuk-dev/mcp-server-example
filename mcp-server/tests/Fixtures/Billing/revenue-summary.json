@@ -1,0 +1,14 @@
+{
+    "tenant_id": 1,
+    "days": 2,
+    "currency": "UAH",
+    "period_start": "2026-10-12",
+    "period_end": "2026-10-13",
+    "generated_at": "2026-10-13T10:00:00+00:00",
+    "daily": [
+        { "date": "2026-10-12", "revenue_minor": 410000, "orders_count": 9, "avg_order_value_minor": 45555,
+          "refunds_minor": 0, "refunds_count": 0, "new_subscriptions": 1, "cancelled_subscriptions": 1 },
+        { "date": "2026-10-13", "revenue_minor": 540000, "orders_count": 12, "avg_order_value_minor": 45000,
+          "refunds_minor": 20000, "refunds_count": 1, "new_subscriptions": 2, "cancelled_subscriptions": 0 }
+    ]
+}

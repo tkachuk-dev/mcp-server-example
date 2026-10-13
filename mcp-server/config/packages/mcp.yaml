@@ -1,0 +1,26 @@
+mcp:
+    servers:
+        default:
+            name: 'internal-ai-mcp'
+            version: '1.0.0'
+            description: 'Read-only access to the Users and Billing internal APIs (contract v1).'
+            instructions: >-
+                Questions about accounts, logins, blocked users, 2FA, roles and security events → users_* tools
+                (Users service). Questions about money, orders, revenue, refunds, subscriptions, RFM segments and
+                churn → billing_* tools (Billing service). tenantId and user_id are the same in both services, so
+                results can be correlated. Data contains no PII. Money is in minor units plus an ISO 4217 currency;
+                dates are ISO 8601 UTC.
+            transports:
+                stdio: false
+                http: true
+            http:
+                path: /mcp
+                # The SDK's DNS rebinding check only allows localhost; App\EventListener\OriginCheckListener
+                # enforces the MCP_ALLOWED_ORIGINS allowlist instead.
+                allowed_hosts: false
+            session:
+                # Psr16SessionStore over cache.app (cache.mcp.sessions is created by the bundle).
+                store: cache
+                ttl: 3600
+            registry:
+                tools: ['App\Mcp\Tool\']

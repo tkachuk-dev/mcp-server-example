@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: Billing Service API
+  version: 1.0.0
+  description: |
+    Billing service (orders, payments, refunds, subscriptions, customer analytics).
+    Internal endpoints under /internal/* are reachable only inside the cluster network.
+servers:
+  - url: http://billing-service
+    description: Internal cluster DNS name
+tags:
+  - name: internal-ai
+    description: Read-only internal API for the MCP server (contract v1).
+  - name: health
+    description: Liveness and readiness probes.
+paths:
+  /internal/ai/v1/tenants/{tenantId}/rfm-summary:
+    $ref: './internal-ai.yaml#/getRfmSummary'
+  /internal/ai/v1/tenants/{tenantId}/churn-risk:
+    $ref: './internal-ai.yaml#/getChurnRisk'
+  /internal/ai/v1/tenants/{tenantId}/revenue-summary:
+    $ref: './internal-ai.yaml#/getRevenueSummary'
+  /health/live:
+    $ref: './health.yaml#/getLiveness'
+  /health/ready:
+    $ref: './health.yaml#/getReadiness'
+components:
+  securitySchemes:
+    serviceToken:
+      $ref: './components.yaml#/components/securitySchemes/serviceToken'

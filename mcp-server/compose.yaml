@@ -1,0 +1,30 @@
+# Local run of the MCP server next to users-service and billing-service.
+# Prerequisite (once): docker network create internal-ai
+# Values: .env.local (git-ignored), otherwise the dev placeholders below.
+services:
+  mcp-server:
+    build: .
+    image: internal-ai/mcp-server:local
+    ports:
+      - "8080:80"
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      APP_SECRET: ${APP_SECRET:-local-dev-secret}
+      USERS_SERVICE_INTERNAL_API: ${USERS_SERVICE_INTERNAL_API:-http://users-service}
+      USERS_SERVICE_TOKEN: ${USERS_SERVICE_TOKEN:-dev-mcp-token}
+      BILLING_SERVICE_INTERNAL_API: ${BILLING_SERVICE_INTERNAL_API:-http://billing-service}
+      BILLING_SERVICE_TOKEN: ${BILLING_SERVICE_TOKEN:-dev-mcp-token}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-change-me.apps.googleusercontent.com}
+      ALLOWED_EMAIL_DOMAIN: ${ALLOWED_EMAIL_DOMAIN:-example.com}
+      MCP_PUBLIC_URL: ${MCP_PUBLIC_URL:-http://localhost:8080/mcp}
+      MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-https://claude.ai,https://claude.com,http://localhost:6274}
+    networks:
+      internal-ai:
+        aliases: [mcp-server]
+    restart: unless-stopped
+
+networks:
+  internal-ai:
+    external: true

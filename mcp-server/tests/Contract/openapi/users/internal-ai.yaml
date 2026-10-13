@@ -1,0 +1,116 @@
+openapi: 3.1.0
+info:
+  title: Users service — internal AI API
+  version: 1.0.0
+  description: >-
+    Read-only aggregates for the MCP server (BFF for AI). Available only inside the cluster
+    network (http://users-service); /internal/* is never published through the ingress.
+    No PII: only internal user ids, event types, dates (ISO 8601, UTC) and aggregates.
+    Incompatible changes go to /internal/ai/v2.
+servers:
+  - url: http://users-service
+security:
+  - serviceToken: []
+tags:
+  - name: internal-ai
+paths:
+  /internal/ai/v1/tenants/{tenantId}/users-summary:
+    get:
+      operationId: getUsersSummary
+      tags: [internal-ai]
+      summary: Users aggregates of a tenant
+      parameters:
+        - $ref: './components.yaml#/components/parameters/TenantId'
+        - $ref: './components.yaml#/components/parameters/XActingUser'
+        - $ref: './components.yaml#/components/parameters/XRequestId'
+        - $ref: './components.yaml#/components/parameters/Traceparent'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              $ref: './components.yaml#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/UsersSummary'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './components.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+        '405':
+          $ref: './components.yaml#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: './components.yaml#/components/responses/TooManyRequests'
+  /internal/ai/v1/tenants/{tenantId}/login-activity:
+    get:
+      operationId: getLoginActivity
+      tags: [internal-ai]
+      summary: Daily login aggregates of a tenant
+      parameters:
+        - $ref: './components.yaml#/components/parameters/TenantId'
+        - $ref: './components.yaml#/components/parameters/Days'
+        - $ref: './components.yaml#/components/parameters/XActingUser'
+        - $ref: './components.yaml#/components/parameters/XRequestId'
+        - $ref: './components.yaml#/components/parameters/Traceparent'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              $ref: './components.yaml#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/LoginActivity'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './components.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+        '405':
+          $ref: './components.yaml#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: './components.yaml#/components/responses/ValidationFailed'
+        '429':
+          $ref: './components.yaml#/components/responses/TooManyRequests'
+  /internal/ai/v1/tenants/{tenantId}/security-events:
+    get:
+      operationId: getSecurityEvents
+      tags: [internal-ai]
+      summary: Latest security events of a tenant
+      parameters:
+        - $ref: './components.yaml#/components/parameters/TenantId'
+        - $ref: './components.yaml#/components/parameters/Limit'
+        - $ref: './components.yaml#/components/parameters/XActingUser'
+        - $ref: './components.yaml#/components/parameters/XRequestId'
+        - $ref: './components.yaml#/components/parameters/Traceparent'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              $ref: './components.yaml#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/SecurityEvents'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './components.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+        '405':
+          $ref: './components.yaml#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: './components.yaml#/components/responses/ValidationFailed'
+        '429':
+          $ref: './components.yaml#/components/responses/TooManyRequests'
+components:
+  securitySchemes:
+    serviceToken:
+      $ref: './components.yaml#/components/securitySchemes/serviceToken'

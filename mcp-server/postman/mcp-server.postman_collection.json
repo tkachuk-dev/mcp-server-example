@@ -1,0 +1,1166 @@
+{
+  "info": {
+    "_postman_id": "6f1d6f0e-6a55-4d3e-9b1a-0c7b5c3e2f10",
+    "name": "MCP server (internal AI)",
+    "description": "MCP server for the internal team: Users + Billing internal API v1 behind Google Workspace OAuth. See README.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "oauth2",
+    "oauth2": [
+      {
+        "key": "accessToken",
+        "value": "{{google_access_token}}",
+        "type": "string"
+      },
+      {
+        "key": "tokenName",
+        "value": "Google (MCP server)",
+        "type": "string"
+      },
+      {
+        "key": "grant_type",
+        "value": "authorization_code_with_pkce",
+        "type": "string"
+      },
+      {
+        "key": "authUrl",
+        "value": "https://accounts.google.com/o/oauth2/v2/auth",
+        "type": "string"
+      },
+      {
+        "key": "accessTokenUrl",
+        "value": "https://oauth2.googleapis.com/token",
+        "type": "string"
+      },
+      {
+        "key": "clientId",
+        "value": "{{google_client_id}}",
+        "type": "string"
+      },
+      {
+        "key": "clientSecret",
+        "value": "{{google_client_secret}}",
+        "type": "string"
+      },
+      {
+        "key": "scope",
+        "value": "openid email",
+        "type": "string"
+      },
+      {
+        "key": "redirect_uri",
+        "value": "https://oauth.pstmn.io/v1/callback",
+        "type": "string"
+      },
+      {
+        "key": "useBrowser",
+        "value": true,
+        "type": "boolean"
+      },
+      {
+        "key": "challengeAlgorithm",
+        "value": "S256",
+        "type": "string"
+      },
+      {
+        "key": "client_authentication",
+        "value": "body",
+        "type": "string"
+      },
+      {
+        "key": "addTokenTo",
+        "value": "header",
+        "type": "string"
+      },
+      {
+        "key": "headerPrefix",
+        "value": "Bearer",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('X-Request-Id is returned', () => pm.expect(pm.response.headers.get('X-Request-Id')).to.be.a('string').and.not.empty);"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Public",
+      "auth": {
+        "type": "noauth"
+      },
+      "item": [
+        {
+          "name": "OAuth protected resource metadata",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                  "const body = pm.response.json();",
+                  "pm.test('resource points to the MCP endpoint', () => pm.expect(body.resource).to.match(new RegExp(pm.environment.get('mcp_path') + '$')));",
+                  "pm.test('Google is the authorization server', () => pm.expect(body.authorization_servers).to.include('https://accounts.google.com'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/.well-known/oauth-protected-resource"
+          }
+        },
+        {
+          "name": "Health live",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                  "pm.test('service name', () => pm.expect(pm.response.json().service).to.eql('mcp-server'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/health/live"
+          }
+        },
+        {
+          "name": "Health ready",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 JSON (does not depend on backends)', () => { pm.response.to.have.status(200); pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/health/ready"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth checks",
+      "auth": {
+        "type": "noauth"
+      },
+      "item": [
+        {
+          "name": "MCP without token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 JSON', () => { pm.response.to.have.status(401); pm.response.to.be.json; });",
+                  "pm.test('WWW-Authenticate points to resource metadata', () => {",
+                  "    const header = pm.response.headers.get('WWW-Authenticate');",
+                  "    pm.expect(header).to.include('Bearer');",
+                  "    pm.expect(header).to.include('resource_metadata=\"');",
+                  "    pm.expect(header).to.include('/.well-known/oauth-protected-resource');",
+                  "});",
+                  "pm.test('message only', () => pm.expect(pm.response.json()).to.have.keys('message'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"{{mcp_protocol_version}}\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"postman\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        },
+        {
+          "name": "MCP with foreign Origin → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 JSON', () => { pm.response.to.have.status(403); pm.response.to.be.json; });",
+                  "pm.test('message only', () => pm.expect(pm.response.json()).to.have.keys('message'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              },
+              {
+                "key": "Origin",
+                "value": "https://evil.example"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"{{mcp_protocol_version}}\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"postman\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MCP",
+      "description": "JSON-RPC 2.0 over POST {{mcp_path}}. Run in order: initialize → notifications/initialized → tools/list → tools/call. Needs a Google access token (collection auth).",
+      "item": [
+        {
+          "name": "initialize",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The bundle answers JSON; SSE (event: message / data: ...) only when the server itself asks the client something.",
+                  "function mcpMessage() {",
+                  "    const type = pm.response.headers.get('Content-Type') || '';",
+                  "    if (!type.includes('text/event-stream')) { return pm.response.json(); }",
+                  "    const data = pm.response.text().split('\\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim());",
+                  "    return JSON.parse(data[data.length - 1]);",
+                  "}",
+                  "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'); });",
+                  "const sessionId = pm.response.headers.get('Mcp-Session-Id');",
+                  "pm.test('Mcp-Session-Id returned', () => pm.expect(sessionId).to.be.a('string').and.not.empty);",
+                  "pm.environment.set('mcp_session_id', sessionId);",
+                  "const msg = mcpMessage();",
+                  "pm.test('protocol negotiated', () => pm.expect(msg.result.protocolVersion).to.eql(pm.environment.get('mcp_protocol_version')));",
+                  "pm.test('server info', () => pm.expect(msg.result.serverInfo).to.have.property('name'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"{{mcp_protocol_version}}\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"postman\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        },
+        {
+          "name": "notifications/initialized",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('202 Accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"notifications/initialized\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        },
+        {
+          "name": "tools/list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The bundle answers JSON; SSE (event: message / data: ...) only when the server itself asks the client something.",
+                  "function mcpMessage() {",
+                  "    const type = pm.response.headers.get('Content-Type') || '';",
+                  "    if (!type.includes('text/event-stream')) { return pm.response.json(); }",
+                  "    const data = pm.response.text().split('\\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim());",
+                  "    return JSON.parse(data[data.length - 1]);",
+                  "}",
+                  "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                  "const names = mcpMessage().result.tools.map(t => t.name);",
+                  "pm.test('all six tools are listed', () => pm.expect(names).to.include.members([\"users_get_summary\", \"users_get_login_activity\", \"users_get_security_events\", \"billing_get_rfm_summary\", \"billing_get_churn_risk\", \"billing_get_revenue_summary\"]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        },
+        {
+          "name": "tools/call users_get_summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The bundle answers JSON; SSE (event: message / data: ...) only when the server itself asks the client something.",
+                  "function mcpMessage() {",
+                  "    const type = pm.response.headers.get('Content-Type') || '';",
+                  "    if (!type.includes('text/event-stream')) { return pm.response.json(); }",
+                  "    const data = pm.response.text().split('\\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim());",
+                  "    return JSON.parse(data[data.length - 1]);",
+                  "}",
+                  "const PII_KEYS = ['email', 'phone', 'name', 'first_name', 'last_name', 'firstname', 'lastname', 'address', 'ip', 'user_agent', 'useragent', 'card', 'iban', 'token', 'password'];",
+                  "function assertNoPii(value) {",
+                  "    if (Array.isArray(value)) { value.forEach(assertNoPii); return; }",
+                  "    if (value && typeof value === 'object') {",
+                  "        Object.keys(value).forEach(k => { pm.expect(PII_KEYS, 'PII key: ' + k).to.not.include(k.toLowerCase()); assertNoPii(value[k]); });",
+                  "    }",
+                  "}",
+                  "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                  "const result = mcpMessage().result;",
+                  "pm.test('not an error', () => pm.expect(result.isError || false).to.eql(false));",
+                  "pm.test('key fields present', () => pm.expect(result.structuredContent).to.include.keys([\"tenant_id\", \"total_users\", \"active_last_30_days\", \"blocked_users\", \"two_factor_enabled_ratio\", \"roles\"]));",
+                  "pm.test('no PII keys', () => assertNoPii(result.structuredContent));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 10,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"users_get_summary\",\n    \"arguments\": {\n      \"tenantId\": {{tenant_id}}\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        },
+        {
+          "name": "tools/call users_get_login_activity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The bundle answers JSON; SSE (event: message / data: ...) only when the server itself asks the client something.",
+                  "function mcpMessage() {",
+                  "    const type = pm.response.headers.get('Content-Type') || '';",
+                  "    if (!type.includes('text/event-stream')) { return pm.response.json(); }",
+                  "    const data = pm.response.text().split('\\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim());",
+                  "    return JSON.parse(data[data.length - 1]);",
+                  "}",
+                  "const PII_KEYS = ['email', 'phone', 'name', 'first_name', 'last_name', 'firstname', 'lastname', 'address', 'ip', 'user_agent', 'useragent', 'card', 'iban', 'token', 'password'];",
+                  "function assertNoPii(value) {",
+                  "    if (Array.isArray(value)) { value.forEach(assertNoPii); return; }",
+                  "    if (value && typeof value === 'object') {",
+                  "        Object.keys(value).forEach(k => { pm.expect(PII_KEYS, 'PII key: ' + k).to.not.include(k.toLowerCase()); assertNoPii(value[k]); });",
+                  "    }",
+                  "}",
+                  "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                  "const result = mcpMessage().result;",
+                  "pm.test('not an error', () => pm.expect(result.isError || false).to.eql(false));",
+                  "pm.test('key fields present', () => pm.expect(result.structuredContent).to.include.keys([\"tenant_id\", \"days\", \"period_start\", \"period_end\", \"daily\"]));",
+                  "pm.test('no PII keys', () => assertNoPii(result.structuredContent));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 11,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"users_get_login_activity\",\n    \"arguments\": {\n      \"tenantId\": {{tenant_id}},\n      \"days\": 30\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        },
+        {
+          "name": "tools/call users_get_security_events",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The bundle answers JSON; SSE (event: message / data: ...) only when the server itself asks the client something.",
+                  "function mcpMessage() {",
+                  "    const type = pm.response.headers.get('Content-Type') || '';",
+                  "    if (!type.includes('text/event-stream')) { return pm.response.json(); }",
+                  "    const data = pm.response.text().split('\\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim());",
+                  "    return JSON.parse(data[data.length - 1]);",
+                  "}",
+                  "const PII_KEYS = ['email', 'phone', 'name', 'first_name', 'last_name', 'firstname', 'lastname', 'address', 'ip', 'user_agent', 'useragent', 'card', 'iban', 'token', 'password'];",
+                  "function assertNoPii(value) {",
+                  "    if (Array.isArray(value)) { value.forEach(assertNoPii); return; }",
+                  "    if (value && typeof value === 'object') {",
+                  "        Object.keys(value).forEach(k => { pm.expect(PII_KEYS, 'PII key: ' + k).to.not.include(k.toLowerCase()); assertNoPii(value[k]); });",
+                  "    }",
+                  "}",
+                  "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                  "const result = mcpMessage().result;",
+                  "pm.test('not an error', () => pm.expect(result.isError || false).to.eql(false));",
+                  "pm.test('key fields present', () => pm.expect(result.structuredContent).to.include.keys([\"tenant_id\", \"limit\", \"events\"]));",
+                  "pm.test('no PII keys', () => assertNoPii(result.structuredContent));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 12,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"users_get_security_events\",\n    \"arguments\": {\n      \"tenantId\": {{tenant_id}},\n      \"limit\": 50\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        },
+        {
+          "name": "tools/call billing_get_rfm_summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The bundle answers JSON; SSE (event: message / data: ...) only when the server itself asks the client something.",
+                  "function mcpMessage() {",
+                  "    const type = pm.response.headers.get('Content-Type') || '';",
+                  "    if (!type.includes('text/event-stream')) { return pm.response.json(); }",
+                  "    const data = pm.response.text().split('\\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim());",
+                  "    return JSON.parse(data[data.length - 1]);",
+                  "}",
+                  "const PII_KEYS = ['email', 'phone', 'name', 'first_name', 'last_name', 'firstname', 'lastname', 'address', 'ip', 'user_agent', 'useragent', 'card', 'iban', 'token', 'password'];",
+                  "function assertNoPii(value) {",
+                  "    if (Array.isArray(value)) { value.forEach(assertNoPii); return; }",
+                  "    if (value && typeof value === 'object') {",
+                  "        Object.keys(value).forEach(k => { pm.expect(PII_KEYS, 'PII key: ' + k).to.not.include(k.toLowerCase()); assertNoPii(value[k]); });",
+                  "    }",
+                  "}",
+                  "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                  "const result = mcpMessage().result;",
+                  "pm.test('not an error', () => pm.expect(result.isError || false).to.eql(false));",
+                  "pm.test('key fields present', () => pm.expect(result.structuredContent).to.include.keys([\"tenant_id\", \"currency\", \"segments\"]));",
+                  "pm.test('no PII keys', () => assertNoPii(result.structuredContent));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 13,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"billing_get_rfm_summary\",\n    \"arguments\": {\n      \"tenantId\": {{tenant_id}}\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        },
+        {
+          "name": "tools/call billing_get_churn_risk",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The bundle answers JSON; SSE (event: message / data: ...) only when the server itself asks the client something.",
+                  "function mcpMessage() {",
+                  "    const type = pm.response.headers.get('Content-Type') || '';",
+                  "    if (!type.includes('text/event-stream')) { return pm.response.json(); }",
+                  "    const data = pm.response.text().split('\\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim());",
+                  "    return JSON.parse(data[data.length - 1]);",
+                  "}",
+                  "const PII_KEYS = ['email', 'phone', 'name', 'first_name', 'last_name', 'firstname', 'lastname', 'address', 'ip', 'user_agent', 'useragent', 'card', 'iban', 'token', 'password'];",
+                  "function assertNoPii(value) {",
+                  "    if (Array.isArray(value)) { value.forEach(assertNoPii); return; }",
+                  "    if (value && typeof value === 'object') {",
+                  "        Object.keys(value).forEach(k => { pm.expect(PII_KEYS, 'PII key: ' + k).to.not.include(k.toLowerCase()); assertNoPii(value[k]); });",
+                  "    }",
+                  "}",
+                  "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                  "const result = mcpMessage().result;",
+                  "pm.test('not an error', () => pm.expect(result.isError || false).to.eql(false));",
+                  "pm.test('key fields present', () => pm.expect(result.structuredContent).to.include.keys([\"tenant_id\", \"limit\", \"customers\"]));",
+                  "pm.test('no PII keys', () => assertNoPii(result.structuredContent));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 14,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"billing_get_churn_risk\",\n    \"arguments\": {\n      \"tenantId\": {{tenant_id}},\n      \"limit\": 50\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        },
+        {
+          "name": "tools/call billing_get_revenue_summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The bundle answers JSON; SSE (event: message / data: ...) only when the server itself asks the client something.",
+                  "function mcpMessage() {",
+                  "    const type = pm.response.headers.get('Content-Type') || '';",
+                  "    if (!type.includes('text/event-stream')) { return pm.response.json(); }",
+                  "    const data = pm.response.text().split('\\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim());",
+                  "    return JSON.parse(data[data.length - 1]);",
+                  "}",
+                  "const PII_KEYS = ['email', 'phone', 'name', 'first_name', 'last_name', 'firstname', 'lastname', 'address', 'ip', 'user_agent', 'useragent', 'card', 'iban', 'token', 'password'];",
+                  "function assertNoPii(value) {",
+                  "    if (Array.isArray(value)) { value.forEach(assertNoPii); return; }",
+                  "    if (value && typeof value === 'object') {",
+                  "        Object.keys(value).forEach(k => { pm.expect(PII_KEYS, 'PII key: ' + k).to.not.include(k.toLowerCase()); assertNoPii(value[k]); });",
+                  "    }",
+                  "}",
+                  "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                  "const result = mcpMessage().result;",
+                  "pm.test('not an error', () => pm.expect(result.isError || false).to.eql(false));",
+                  "pm.test('key fields present', () => pm.expect(result.structuredContent).to.include.keys([\"tenant_id\", \"days\", \"currency\", \"period_start\", \"period_end\", \"daily\"]));",
+                  "pm.test('no PII keys', () => assertNoPii(result.structuredContent));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 15,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"billing_get_revenue_summary\",\n    \"arguments\": {\n      \"tenantId\": {{tenant_id}},\n      \"days\": 30\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        },
+        {
+          "name": "tools/call with invalid limit → isError",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The bundle answers JSON; SSE (event: message / data: ...) only when the server itself asks the client something.",
+                  "function mcpMessage() {",
+                  "    const type = pm.response.headers.get('Content-Type') || '';",
+                  "    if (!type.includes('text/event-stream')) { return pm.response.json(); }",
+                  "    const data = pm.response.text().split('\\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim());",
+                  "    return JSON.parse(data[data.length - 1]);",
+                  "}",
+                  "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                  "const result = mcpMessage().result;",
+                  "pm.test('tool error', () => pm.expect(result.isError).to.eql(true));",
+                  "pm.test('names the parameter', () => pm.expect(result.content[0].text).to.include('limit'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 20,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"users_get_security_events\",\n    \"arguments\": {\n      \"tenantId\": {{tenant_id}},\n      \"limit\": 500\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        },
+        {
+          "name": "close session (DELETE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.environment.set('mcp_session_id', '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "MCP-Protocol-Version",
+                "value": "{{mcp_protocol_version}}"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "url": "{{base_url}}{{mcp_path}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Backends",
+      "description": "Local debugging: the backends' internal API directly, with a service token and X-Acting-User (never exposed via ingress).",
+      "item": [
+        {
+          "name": "Users",
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "key": "token",
+                "value": "{{users_service_token}}",
+                "type": "string"
+              }
+            ]
+          },
+          "item": [
+            {
+              "name": "Users: users-summary",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const PII_KEYS = ['email', 'phone', 'name', 'first_name', 'last_name', 'firstname', 'lastname', 'address', 'ip', 'user_agent', 'useragent', 'card', 'iban', 'token', 'password'];",
+                      "function assertNoPii(value) {",
+                      "    if (Array.isArray(value)) { value.forEach(assertNoPii); return; }",
+                      "    if (value && typeof value === 'object') {",
+                      "        Object.keys(value).forEach(k => { pm.expect(PII_KEYS, 'PII key: ' + k).to.not.include(k.toLowerCase()); assertNoPii(value[k]); });",
+                      "    }",
+                      "}",
+                      "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                      "const body = pm.response.json();",
+                      "pm.test('key fields present', () => pm.expect(body).to.include.keys([\"tenant_id\", \"total_users\", \"active_last_30_days\", \"blocked_users\", \"two_factor_enabled_ratio\", \"roles\"]));",
+                      "pm.test('no status field', () => pm.expect(body).to.not.have.property('status'));",
+                      "pm.test('no PII keys', () => assertNoPii(body));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Acting-User",
+                    "value": "{{acting_user}}"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{users_service_url}}/internal/ai/v1/tenants/{{tenant_id}}/users-summary"
+              }
+            },
+            {
+              "name": "Users: login-activity",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const PII_KEYS = ['email', 'phone', 'name', 'first_name', 'last_name', 'firstname', 'lastname', 'address', 'ip', 'user_agent', 'useragent', 'card', 'iban', 'token', 'password'];",
+                      "function assertNoPii(value) {",
+                      "    if (Array.isArray(value)) { value.forEach(assertNoPii); return; }",
+                      "    if (value && typeof value === 'object') {",
+                      "        Object.keys(value).forEach(k => { pm.expect(PII_KEYS, 'PII key: ' + k).to.not.include(k.toLowerCase()); assertNoPii(value[k]); });",
+                      "    }",
+                      "}",
+                      "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                      "const body = pm.response.json();",
+                      "pm.test('key fields present', () => pm.expect(body).to.include.keys([\"tenant_id\", \"days\", \"period_start\", \"period_end\", \"daily\"]));",
+                      "pm.test('no status field', () => pm.expect(body).to.not.have.property('status'));",
+                      "pm.test('no PII keys', () => assertNoPii(body));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Acting-User",
+                    "value": "{{acting_user}}"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{users_service_url}}/internal/ai/v1/tenants/{{tenant_id}}/login-activity?days=30"
+              }
+            },
+            {
+              "name": "Users: security-events",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const PII_KEYS = ['email', 'phone', 'name', 'first_name', 'last_name', 'firstname', 'lastname', 'address', 'ip', 'user_agent', 'useragent', 'card', 'iban', 'token', 'password'];",
+                      "function assertNoPii(value) {",
+                      "    if (Array.isArray(value)) { value.forEach(assertNoPii); return; }",
+                      "    if (value && typeof value === 'object') {",
+                      "        Object.keys(value).forEach(k => { pm.expect(PII_KEYS, 'PII key: ' + k).to.not.include(k.toLowerCase()); assertNoPii(value[k]); });",
+                      "    }",
+                      "}",
+                      "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                      "const body = pm.response.json();",
+                      "pm.test('key fields present', () => pm.expect(body).to.include.keys([\"tenant_id\", \"limit\", \"events\"]));",
+                      "pm.test('no status field', () => pm.expect(body).to.not.have.property('status'));",
+                      "pm.test('no PII keys', () => assertNoPii(body));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Acting-User",
+                    "value": "{{acting_user}}"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{users_service_url}}/internal/ai/v1/tenants/{{tenant_id}}/security-events?limit=50"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Billing",
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "key": "token",
+                "value": "{{billing_service_token}}",
+                "type": "string"
+              }
+            ]
+          },
+          "item": [
+            {
+              "name": "Billing: rfm-summary",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const PII_KEYS = ['email', 'phone', 'name', 'first_name', 'last_name', 'firstname', 'lastname', 'address', 'ip', 'user_agent', 'useragent', 'card', 'iban', 'token', 'password'];",
+                      "function assertNoPii(value) {",
+                      "    if (Array.isArray(value)) { value.forEach(assertNoPii); return; }",
+                      "    if (value && typeof value === 'object') {",
+                      "        Object.keys(value).forEach(k => { pm.expect(PII_KEYS, 'PII key: ' + k).to.not.include(k.toLowerCase()); assertNoPii(value[k]); });",
+                      "    }",
+                      "}",
+                      "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                      "const body = pm.response.json();",
+                      "pm.test('key fields present', () => pm.expect(body).to.include.keys([\"tenant_id\", \"currency\", \"segments\"]));",
+                      "pm.test('no status field', () => pm.expect(body).to.not.have.property('status'));",
+                      "pm.test('no PII keys', () => assertNoPii(body));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Acting-User",
+                    "value": "{{acting_user}}"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{billing_service_url}}/internal/ai/v1/tenants/{{tenant_id}}/rfm-summary"
+              }
+            },
+            {
+              "name": "Billing: churn-risk",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const PII_KEYS = ['email', 'phone', 'name', 'first_name', 'last_name', 'firstname', 'lastname', 'address', 'ip', 'user_agent', 'useragent', 'card', 'iban', 'token', 'password'];",
+                      "function assertNoPii(value) {",
+                      "    if (Array.isArray(value)) { value.forEach(assertNoPii); return; }",
+                      "    if (value && typeof value === 'object') {",
+                      "        Object.keys(value).forEach(k => { pm.expect(PII_KEYS, 'PII key: ' + k).to.not.include(k.toLowerCase()); assertNoPii(value[k]); });",
+                      "    }",
+                      "}",
+                      "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                      "const body = pm.response.json();",
+                      "pm.test('key fields present', () => pm.expect(body).to.include.keys([\"tenant_id\", \"limit\", \"customers\"]));",
+                      "pm.test('no status field', () => pm.expect(body).to.not.have.property('status'));",
+                      "pm.test('no PII keys', () => assertNoPii(body));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Acting-User",
+                    "value": "{{acting_user}}"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{billing_service_url}}/internal/ai/v1/tenants/{{tenant_id}}/churn-risk?limit=50"
+              }
+            },
+            {
+              "name": "Billing: revenue-summary",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const PII_KEYS = ['email', 'phone', 'name', 'first_name', 'last_name', 'firstname', 'lastname', 'address', 'ip', 'user_agent', 'useragent', 'card', 'iban', 'token', 'password'];",
+                      "function assertNoPii(value) {",
+                      "    if (Array.isArray(value)) { value.forEach(assertNoPii); return; }",
+                      "    if (value && typeof value === 'object') {",
+                      "        Object.keys(value).forEach(k => { pm.expect(PII_KEYS, 'PII key: ' + k).to.not.include(k.toLowerCase()); assertNoPii(value[k]); });",
+                      "    }",
+                      "}",
+                      "pm.test('200 JSON', () => { pm.response.to.have.status(200); pm.response.to.be.json; });",
+                      "const body = pm.response.json();",
+                      "pm.test('key fields present', () => pm.expect(body).to.include.keys([\"tenant_id\", \"days\", \"currency\", \"period_start\", \"period_end\", \"daily\"]));",
+                      "pm.test('no status field', () => pm.expect(body).to.not.have.property('status'));",
+                      "pm.test('no PII keys', () => assertNoPii(body));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Acting-User",
+                    "value": "{{acting_user}}"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{billing_service_url}}/internal/ai/v1/tenants/{{tenant_id}}/revenue-summary?days=30"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

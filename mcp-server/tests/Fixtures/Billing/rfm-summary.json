@@ -1,0 +1,13 @@
+{
+    "tenant_id": 1,
+    "currency": "UAH",
+    "generated_at": "2026-10-13T10:00:00+00:00",
+    "segments": [
+        { "segment": "champions", "customers_count": 12, "avg_recency_days": 4.5, "avg_frequency": 9.2, "avg_monetary_minor": 1250000 },
+        { "segment": "loyal", "customers_count": 20, "avg_recency_days": 18.1, "avg_frequency": 4.3, "avg_monetary_minor": 640000 },
+        { "segment": "potential", "customers_count": 15, "avg_recency_days": 35, "avg_frequency": 1.6, "avg_monetary_minor": 120000 },
+        { "segment": "at_risk", "customers_count": 9, "avg_recency_days": 95.4, "avg_frequency": 3.1, "avg_monetary_minor": 410000 },
+        { "segment": "hibernating", "customers_count": 6, "avg_recency_days": 180, "avg_frequency": 1.2, "avg_monetary_minor": 90000 },
+        { "segment": "lost", "customers_count": 4, "avg_recency_days": 310.5, "avg_frequency": 1, "avg_monetary_minor": 45000 }
+    ]
+}

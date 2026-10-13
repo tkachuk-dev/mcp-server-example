@@ -1,0 +1,11 @@
+{
+    "tenant_id": 1,
+    "days": 2,
+    "period_start": "2026-10-12",
+    "period_end": "2026-10-13",
+    "generated_at": "2026-10-13T10:00:00+00:00",
+    "daily": [
+        { "date": "2026-10-12", "successful_logins": 35, "failed_logins": 2, "unique_active_users": 28, "password_resets": 0 },
+        { "date": "2026-10-13", "successful_logins": 40, "failed_logins": 3, "unique_active_users": 31, "password_resets": 1 }
+    ]
+}

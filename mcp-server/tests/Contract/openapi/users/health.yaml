@@ -1,0 +1,33 @@
+openapi: 3.1.0
+info:
+  title: Users service — health
+  version: 1.0.0
+paths:
+  /health/live:
+    get:
+      operationId: live
+      tags: [health]
+      summary: Liveness probe (process is up)
+      security: []
+      responses:
+        '200':
+          description: Alive
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Health'
+  /health/ready:
+    get:
+      operationId: ready
+      tags: [health]
+      summary: Readiness probe (database and cache reachable)
+      security: []
+      responses:
+        '200':
+          description: Ready
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Health'
+        '503':
+          $ref: './components.yaml#/components/responses/ServiceUnavailable'

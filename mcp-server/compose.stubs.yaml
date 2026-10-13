@@ -1,0 +1,33 @@
+# Run without the real backends: WireMock stubs serve tests/Fixtures (the same files the
+# contract tests check against the services' OpenAPI specs).
+#   docker compose -f compose.yaml -f compose.stubs.yaml up --build
+# Stub rules: Bearer dev-mcp-token + X-Acting-User required; tenant 404404 → 404;
+# days=999 / limit=999 → 422.
+services:
+  mcp-server:
+    environment:
+      USERS_SERVICE_INTERNAL_API: http://users-stub:8080
+      BILLING_SERVICE_INTERNAL_API: http://billing-stub:8080
+      USERS_SERVICE_TOKEN: dev-mcp-token
+      BILLING_SERVICE_TOKEN: dev-mcp-token
+    depends_on: [users-stub, billing-stub]
+
+  users-stub:
+    image: wiremock/wiremock:3.13.1
+    command: ["--disable-banner"]
+    ports:
+      - "18081:8080"
+    volumes:
+      - ./docker/wiremock/users/mappings:/home/wiremock/mappings:ro
+      - ./tests/Fixtures/Users:/home/wiremock/__files:ro
+    networks: [internal-ai]
+
+  billing-stub:
+    image: wiremock/wiremock:3.13.1
+    command: ["--disable-banner"]
+    ports:
+      - "18082:8080"
+    volumes:
+      - ./docker/wiremock/billing/mappings:/home/wiremock/mappings:ro
+      - ./tests/Fixtures/Billing:/home/wiremock/__files:ro
+    networks: [internal-ai]

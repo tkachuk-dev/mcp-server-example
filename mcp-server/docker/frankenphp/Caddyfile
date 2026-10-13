@@ -1,0 +1,20 @@
+{
+	skip_install_trust
+	{$CADDY_GLOBAL_OPTIONS}
+
+	frankenphp {
+		# Worker mode: the Symfony kernel is booted once and reused between requests
+		# (symfony/runtime switches to FrankenPhpWorkerRunner when FRANKENPHP_WORKER is set).
+		worker {
+			file /app/public/index.php
+			env FRANKENPHP_WORKER 1
+		}
+	}
+}
+
+{$SERVER_NAME::80} {
+	root /app/public
+	encode zstd br gzip
+
+	php_server
+}

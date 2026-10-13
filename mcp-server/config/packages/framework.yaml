@@ -1,0 +1,51 @@
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+    # Stateless service: MCP sessions live in cache.app (config/packages/mcp.yaml), no PHP sessions.
+    session: false
+
+    http_client:
+        scoped_clients:
+            # Users service internal API. Retry only on network errors and 502/503/504 (GET is idempotent).
+            users_service.api:
+                base_uri: '%env(USERS_SERVICE_INTERNAL_API)%'
+                auth_bearer: '%env(USERS_SERVICE_TOKEN)%'
+                headers: { Accept: 'application/json' }
+                timeout: 5
+                max_duration: 10
+                retry_failed:
+                    max_retries: 1
+                    delay: 200
+                    multiplier: 2
+                    # 0 = network/transport errors (GenericRetryStrategy convention).
+                    http_codes: [0, 502, 503, 504]
+            # Billing service internal API, same policy.
+            billing_service.api:
+                base_uri: '%env(BILLING_SERVICE_INTERNAL_API)%'
+                auth_bearer: '%env(BILLING_SERVICE_TOKEN)%'
+                headers: { Accept: 'application/json' }
+                timeout: 5
+                max_duration: 10
+                retry_failed:
+                    max_retries: 1
+                    delay: 200
+                    multiplier: 2
+                    # 0 = network/transport errors (GenericRetryStrategy convention).
+                    http_codes: [0, 502, 503, 504]
+            google.oauth:
+                base_uri: 'https://oauth2.googleapis.com'
+                headers: { Accept: 'application/json' }
+                timeout: 5
+                max_duration: 10
+
+    rate_limiter:
+        mcp_user:
+            policy: sliding_window
+            limit: 60
+            interval: '1 minute'
+
+when@test:
+    framework:
+        test: true
+        http_client:
+            mock_response_factory: App\Tests\Support\HttpMockResponder

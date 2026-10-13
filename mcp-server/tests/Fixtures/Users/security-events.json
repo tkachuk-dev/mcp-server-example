@@ -1,0 +1,10 @@
+{
+    "tenant_id": 1,
+    "limit": 50,
+    "generated_at": "2026-10-13T10:00:00+00:00",
+    "events": [
+        { "id": 991, "type": "failed_login_burst", "user_id": 42, "occurred_at": "2026-10-13T09:58:00+00:00" },
+        { "id": 990, "type": "2fa_disabled", "user_id": 17, "occurred_at": "2026-10-13T08:12:00+00:00" },
+        { "id": 989, "type": "account_locked", "user_id": null, "occurred_at": "2026-10-12T22:40:00+00:00" }
+    ]
+}

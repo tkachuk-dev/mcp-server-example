@@ -1,0 +1,10 @@
+{
+    "tenant_id": 1,
+    "limit": 50,
+    "generated_at": "2026-10-13T10:00:00+00:00",
+    "customers": [
+        { "user_id": 42, "churn_score": 0.87, "segment": "at_risk", "last_order_at": "2026-07-01T12:00:00+00:00" },
+        { "user_id": 77, "churn_score": 0.61, "segment": "hibernating", "last_order_at": "2026-05-20T08:30:00+00:00" },
+        { "user_id": 105, "churn_score": 1, "segment": "lost", "last_order_at": null }
+    ]
+}

@@ -1,0 +1,99 @@
+# Path items for /internal/ai/v1/* (tag internal-ai), referenced from openapi.yaml.
+# Contract v1: GET only; breaking changes go to /internal/ai/v2.
+getRfmSummary:
+  get:
+    operationId: getRfmSummary
+    tags: [internal-ai]
+    summary: RFM segments of the tenant's customers
+    description: Aggregates per RFM segment (customers count, average recency/frequency/monetary). Cached for 10 minutes.
+    security:
+      - serviceToken: []
+    parameters:
+      - $ref: './components.yaml#/components/parameters/TenantId'
+      - $ref: './components.yaml#/components/parameters/XActingUser'
+    responses:
+      '200':
+        description: RFM summary
+        headers:
+          X-Request-Id:
+            $ref: './components.yaml#/components/headers/XRequestId'
+        content:
+          application/json:
+            schema:
+              $ref: './components.yaml#/components/schemas/RfmSummary'
+      '401':
+        $ref: './components.yaml#/components/responses/Unauthorized'
+      '404':
+        $ref: './components.yaml#/components/responses/NotFound'
+      '405':
+        $ref: './components.yaml#/components/responses/MethodNotAllowed'
+      '429':
+        $ref: './components.yaml#/components/responses/TooManyRequests'
+
+getChurnRisk:
+  get:
+    operationId: getChurnRisk
+    tags: [internal-ai]
+    summary: Top customers by churn risk
+    description: Active customers (blocked/deleted excluded) sorted by churn_score desc. Cached for 10 minutes.
+    security:
+      - serviceToken: []
+    parameters:
+      - $ref: './components.yaml#/components/parameters/TenantId'
+      - $ref: './components.yaml#/components/parameters/XActingUser'
+      - $ref: './components.yaml#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Churn risk list
+        headers:
+          X-Request-Id:
+            $ref: './components.yaml#/components/headers/XRequestId'
+        content:
+          application/json:
+            schema:
+              $ref: './components.yaml#/components/schemas/ChurnRisk'
+      '401':
+        $ref: './components.yaml#/components/responses/Unauthorized'
+      '404':
+        $ref: './components.yaml#/components/responses/NotFound'
+      '405':
+        $ref: './components.yaml#/components/responses/MethodNotAllowed'
+      '422':
+        $ref: './components.yaml#/components/responses/ValidationFailed'
+      '429':
+        $ref: './components.yaml#/components/responses/TooManyRequests'
+
+getRevenueSummary:
+  get:
+    operationId: getRevenueSummary
+    tags: [internal-ai]
+    summary: Daily revenue of the tenant
+    description: |
+      One entry per day from period_start to period_end (inclusive, ascending; days without data are zeros).
+      Amounts in minor units of `currency`. Cached for 10 minutes.
+    security:
+      - serviceToken: []
+    parameters:
+      - $ref: './components.yaml#/components/parameters/TenantId'
+      - $ref: './components.yaml#/components/parameters/XActingUser'
+      - $ref: './components.yaml#/components/parameters/Days'
+    responses:
+      '200':
+        description: Revenue summary
+        headers:
+          X-Request-Id:
+            $ref: './components.yaml#/components/headers/XRequestId'
+        content:
+          application/json:
+            schema:
+              $ref: './components.yaml#/components/schemas/RevenueSummary'
+      '401':
+        $ref: './components.yaml#/components/responses/Unauthorized'
+      '404':
+        $ref: './components.yaml#/components/responses/NotFound'
+      '405':
+        $ref: './components.yaml#/components/responses/MethodNotAllowed'
+      '422':
+        $ref: './components.yaml#/components/responses/ValidationFailed'
+      '429':
+        $ref: './components.yaml#/components/responses/TooManyRequests'

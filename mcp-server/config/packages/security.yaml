@@ -1,0 +1,22 @@
+security:
+    providers:
+        # Users come from the Google token itself (UserBadge loader in GoogleTokenHandler).
+        users_in_memory: { memory: null }
+
+    firewalls:
+        dev:
+            pattern: ^/(_profiler|_wdt)/
+            security: false
+        public:
+            pattern: ^/(\.well-known/oauth-protected-resource|health/)
+            security: false
+        main:
+            stateless: true
+            provider: users_in_memory
+            access_token:
+                token_handler: App\Security\GoogleTokenHandler
+                failure_handler: App\Security\McpAuthenticationFailureHandler
+            entry_point: App\Security\McpAuthenticationEntryPoint
+
+    access_control:
+        - { path: ^/, roles: ROLE_USER }

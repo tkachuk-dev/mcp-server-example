@@ -1,0 +1,50 @@
+monolog:
+    channels:
+        - deprecation
+        - audit # one entry per tools/call (App\Mcp\AuditLogger)
+
+when@dev:
+    monolog:
+        handlers:
+            audit:
+                type: stream
+                path: php://stderr
+                level: info
+                formatter: monolog.formatter.json
+                channels: [audit]
+            main:
+                type: stream
+                path: php://stderr
+                level: debug
+                formatter: monolog.formatter.json
+                channels: ['!event', '!audit']
+
+when@test:
+    monolog:
+        handlers:
+            # Tests read audit entries from this in-memory handler (see config/services.yaml).
+            audit:
+                type: service
+                id: app.test.audit_handler
+                channels: [audit]
+            main:
+                type: stream
+                path: '%kernel.logs_dir%/%kernel.environment%.log'
+                level: debug
+                channels: ['!event']
+
+when@prod:
+    monolog:
+        handlers:
+            audit:
+                type: stream
+                path: php://stderr
+                level: info
+                formatter: monolog.formatter.json
+                channels: [audit]
+            main:
+                type: stream
+                path: php://stderr
+                level: info
+                formatter: monolog.formatter.json
+                channels: ['!event', '!audit', '!deprecation']

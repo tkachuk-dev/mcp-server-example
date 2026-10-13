@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+            - '../src/Dto/'
+            - '../src/Enums/'
+            - '../src/Exception/'
+            - '../src/Backend/InternalApiClient.php'
+
+    # One InternalApiClient per backend. There is no attribute that creates two instances of one class
+    # with different arguments, so these two definitions are the only manual ones.
+    app.backend.users:
+        class: App\Backend\InternalApiClient
+        arguments:
+            $httpClient: '@users_service.api'
+            $service: !php/enum App\Enums\BackendService::Users
+
+    app.backend.billing:
+        class: App\Backend\InternalApiClient
+        arguments:
+            $httpClient: '@billing_service.api'
+            $service: !php/enum App\Enums\BackendService::Billing
+
+when@test:
+    services:
+        App\Tests\Support\HttpMockResponder:
+            public: true
+        app.test.audit_handler:
+            class: Monolog\Handler\TestHandler
+            public: true
