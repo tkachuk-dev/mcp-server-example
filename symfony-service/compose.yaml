@@ -26,6 +26,8 @@ services:
 
   database:
     image: postgres:17-alpine
+    ports:
+      - "127.0.0.1:5433:5432"   # host access for IDE / psql (local only)
     environment:
       POSTGRES_DB: users
       POSTGRES_USER: app
@@ -40,6 +42,8 @@ services:
 
   redis:
     image: redis:7.4-alpine
+    ports:
+      - "127.0.0.1:6380:6379"   # host access for redis-cli / IDE (local only)
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

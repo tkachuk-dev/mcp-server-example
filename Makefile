@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help network up up-users up-billing up-mcp up-mcp-stubs down down-users down-billing down-mcp \
 	    restart build ps logs logs-users logs-billing logs-mcp health \
-	    migrate migrate-users migrate-billing seed seed-users seed-billing fresh-users fresh-billing destroy \
+	    migrate migrate-users migrate-billing seed seed-users seed-billing fresh-billing destroy \
 	    sh-users sh-billing sh-mcp db-users db-billing redis-users redis-billing console artisan tinker mcp-console \
 	    install test test-users test-billing test-mcp lint lint-users lint-billing lint-mcp fix \
 	    contract-sync newman token
@@ -104,16 +104,17 @@ migrate-billing: ## Run billing-service migrations
 
 seed: seed-users seed-billing ## Load demo data into both backends
 
-seed-users: ## Load users-service fixtures (replaces the data)
-	$(USERS_DC) exec -T users-service bin/console doctrine:fixtures:load -n
-
-seed-billing: ## Load billing-service demo data
-	$(BILLING_DC) exec -T billing-service php artisan db:seed --force
-
-fresh-users: ## Recreate the users-service schema and load fixtures
+# The fixtures purger uses DELETE, which keeps PostgreSQL sequences running, so the schema is recreated
+# to keep the demo tenant ids at 1 and 2 (the same ids the billing-service demo data uses).
+seed-users: ## Recreate the users-service schema and load fixtures (clears cached results)
 	$(USERS_DC) exec -T users-service bin/console doctrine:schema:drop --force --full-database
 	$(USERS_DC) exec -T users-service bin/console doctrine:migrations:migrate -n
 	$(USERS_DC) exec -T users-service bin/console doctrine:fixtures:load -n
+	$(USERS_DC) exec -T users-service bin/console cache:pool:clear cache.app
+
+seed-billing: ## Load billing-service demo data (replaces the data, clears cached results)
+	$(BILLING_DC) exec -T billing-service php artisan db:seed --force
+	$(BILLING_DC) exec -T billing-service php artisan cache:clear
 
 fresh-billing: ## Recreate the billing-service schema and seed demo data
 	$(BILLING_DC) exec -T billing-service php artisan migrate:fresh --seed --force

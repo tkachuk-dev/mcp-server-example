@@ -106,6 +106,28 @@ curl -H 'Authorization: Bearer dev-mcp-token' -H 'X-Acting-User: dev@example.com
 | users-service | 8081 (internal), 8091 (public entry) | `users-service` |
 | billing-service | 8082 | `billing-service` |
 
+## Database connections (local)
+
+Each backend has its own PostgreSQL and Redis (database per service). For IDEs and CLI tools the
+ports are published only on `127.0.0.1`. The credentials are local dev values from each service's
+`compose.yaml`, not secrets.
+
+| | users-service | billing-service |
+|---|---|---|
+| **PostgreSQL 17** host / port | `127.0.0.1` / `5433` | `127.0.0.1` / `5434` |
+| database / user / password | `users` / `app` / `app` | `billing` / `billing` / `billing` |
+| JDBC URL (PhpStorm, DataGrip) | `jdbc:postgresql://127.0.0.1:5433/users` | `jdbc:postgresql://127.0.0.1:5434/billing` |
+| psql | `psql postgresql://app:app@127.0.0.1:5433/users` | `psql postgresql://billing:billing@127.0.0.1:5434/billing` |
+| **Redis 7** host / port | `127.0.0.1` / `6380` | `127.0.0.1` / `6381` |
+| Redis databases | `0`: cache, rate limiter | `0`: queue, `1`: cache and rate limiter |
+| Inside the docker network | `postgresql://app:app@database:5432/users`, `redis://redis:6379` | `billing-db:5432`, `billing-redis:6379` |
+
+Shortcuts without host ports: `make db-users`, `make db-billing`, `make redis-users`,
+`make redis-billing`.
+
+Tests don't use these databases: users-service runs on SQLite (`var/test.db`), billing-service on SQLite
+`:memory:`. `make seed` recreates the demo data in both backends, with tenants `1` and `2` in each.
+
 ## Tests and linters
 
 | Service | Tests | Static analysis / code style |

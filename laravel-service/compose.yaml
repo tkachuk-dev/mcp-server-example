@@ -46,6 +46,8 @@ services:
 
   billing-db:
     image: postgres:17-alpine
+    ports:
+      - "127.0.0.1:5434:5432"   # host access for IDE / psql (local only)
     environment:
       POSTGRES_DB: billing
       POSTGRES_USER: billing
@@ -62,6 +64,8 @@ services:
 
   billing-redis:
     image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6381:6379"   # host access for redis-cli / IDE (local only)
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
